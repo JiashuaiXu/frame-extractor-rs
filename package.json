@@ -1,0 +1,21 @@
+{
+  "name": "frame-extractor-rs",
+  "version": "1.0.0",
+  "description": "视频抽帧工具 - 从 MP4 视频中按间隔提取帧",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.0.0",
+    "@tauri-apps/plugin-dialog": "^2.0.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0",
+    "vite": "^5.0.0"
+  }
+}
+

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视频抽帧工具</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎬 视频抽帧工具</h1>
+            <p class="subtitle">从 MP4 视频中按间隔提取帧</p>
+        </header>
+
+        <main>
+            <section class="config-section">
+                <h2>📁 目录设置</h2>
+                <div class="form-group">
+                    <label>输入目录（包含 MP4 视频）</label>
+                    <div class="input-group">
+                        <input type="text" id="inputDir" placeholder="选择包含视频的目录" readonly>
+                        <button id="selectInputDir" class="btn btn-secondary">浏览...</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>输出目录（保存提取的图片）</label>
+                    <div class="input-group">
+                        <input type="text" id="outputDir" placeholder="选择输出目录" readonly>
+                        <button id="selectOutputDir" class="btn btn-secondary">浏览...</button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="config-section">
+                <h2>⚙️ 抽帧设置</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>跳过开头（秒）</label>
+                        <input type="number" id="skipStart" value="2" min="0" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label>抽帧间隔（秒）</label>
+                        <input type="number" id="frameInterval" value="5" min="0.1" step="0.1">
+                    </div>
+                </div>
+            </section>
+
+            <section class="config-section">
+                <h2>📂 目录选项</h2>
+                <div class="checkbox-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="preserveDirStructure" checked>
+                        <span>保留原始子目录结构</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="createVideoSubdir">
+                        <span>为每个视频创建独立子目录</span>
+                    </label>
+                </div>
+            </section>
+
+            <section class="action-section">
+                <button id="startProcess" class="btn btn-primary" disabled>🚀 开始处理</button>
+            </section>
+
+            <section class="progress-section" id="progressSection" style="display: none;">
+                <h2>📊 处理进度</h2>
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="progressBar"></div>
+                    <span class="progress-text" id="progressText">0%</span>
+                </div>
+                <div class="status-text" id="statusText">准备开始...</div>
+            </section>
+
+            <section class="results-section" id="resultsSection" style="display: none;">
+                <h2>✅ 处理结果</h2>
+                <div class="results-summary" id="resultsSummary"></div>
+                <div class="results-list" id="resultsList"></div>
+            </section>
+        </main>
+    </div>
+
+    <script type="module" src="main.js"></script>
+</body>
+</html>
+

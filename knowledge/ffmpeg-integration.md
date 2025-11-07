@@ -153,9 +153,12 @@ fn check_ffmpeg() -> Result<()> {
 }
 ```
 
-### 提取单帧
+### 提取单帧（已废弃 - 性能差）
+
+⚠️ **注意**：此方法已废弃，因为每帧调用一次 FFmpeg 性能极差。请使用批量提取方法。
 
 ```rust
+// ❌ 不推荐：每帧调用一次 FFmpeg
 let output = Command::new(&ffmpeg_path)
     .args(&[
         "-i", video_path.to_string_lossy().as_ref(),  // 输入文件
@@ -169,17 +172,72 @@ let output = Command::new(&ffmpeg_path)
     .with_context(|| format!("提取帧失败: {}", img_path.display()))?;
 ```
 
+### 批量提取帧（推荐 - 高性能）
+
+✅ **推荐**：使用 FFmpeg `select` 过滤器一次性提取所有需要的帧。
+
+```rust
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
+
+// 配置 FFmpeg 命令（隐藏窗口）
+fn configure_ffmpeg_command(cmd: &mut Command) {
+    #[cfg(windows)]
+    {
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+    cmd.stdout(Stdio::piped())
+       .stderr(Stdio::piped());
+}
+
+// 批量提取帧
+let output_pattern = output_dir.join(format!("{}_%04d.jpg", base_name));
+let filter = format!(
+    "select='gte(t,{})*lt(mod(t-{},{}),0.1)'",
+    skip_start_sec,
+    skip_start_sec,
+    frame_interval_sec
+);
+
+let mut cmd = Command::new(&ffmpeg_path);
+cmd.args(&[
+    "-ss", &format!("{}", skip_start_sec),  // 先定位到开始时间
+    "-i", video_path.to_string_lossy().as_ref(),
+    "-vf", &filter,                          // select 过滤器
+    "-vsync", "vfr",                         // 可变帧率输出
+    "-q:v", "2",                             // 高质量 JPEG
+    "-y",                                    // 覆盖已存在文件
+    output_pattern.to_string_lossy().as_ref(),
+]);
+
+configure_ffmpeg_command(&mut cmd);
+let output = cmd.output()?;
+```
+
+**性能对比**：
+- ❌ 单帧提取：10 分钟视频，每 5 秒一帧 = 120 次调用，~60-120 秒
+- ✅ 批量提取：10 分钟视频，每 5 秒一帧 = 1 次调用，~5-10 秒
+- **性能提升：6-25 倍**
+
+**FFmpeg select 过滤器说明**：
+- `gte(t, start)`：从开始时间之后
+- `mod(t-start, interval)`：计算时间间隔的模
+- `lt(..., 0.1)`：容差范围内选择帧（0.1 秒容差）
+
 ### 获取视频信息
 
 ```rust
 // 获取视频时长和 FPS
-let output = Command::new(ffmpeg_path)
-    .args(&[
-        "-i", video_path.to_string_lossy().as_ref(),
-        "-f", "null",
-        "-",
-    ])
-    .stderr(std::process::Stdio::piped())
+let mut cmd = Command::new(ffmpeg_path);
+cmd.args(&[
+    "-i", video_path.to_string_lossy().as_ref(),
+    "-f", "null",
+    "-",
+]);
+configure_ffmpeg_command(&mut cmd);  // 隐藏窗口
+
+let output = cmd
     .output()
     .context("无法执行 FFmpeg 获取视频信息")?;
 

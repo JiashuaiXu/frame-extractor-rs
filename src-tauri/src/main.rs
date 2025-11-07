@@ -4,10 +4,12 @@
 mod extractor;
 
 use extractor::extract_frames;
+use tauri::AppHandle;
 
 
 #[tauri::command]
 async fn process_videos(
+    app: AppHandle,
     input_dir: String,
     output_dir: String,
     skip_start_sec: u64,
@@ -16,6 +18,7 @@ async fn process_videos(
     create_video_subdir: bool,
 ) -> Result<Vec<extractor::ProcessResult>, String> {
     extract_frames(
+        &app,
         &input_dir,
         &output_dir,
         skip_start_sec,

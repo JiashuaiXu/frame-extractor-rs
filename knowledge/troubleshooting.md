@@ -312,11 +312,92 @@ console.log(window.__TAURI__);
 
 ---
 
+### 抽帧操作异常缓慢
+
+#### 症状
+
+- 抽帧操作耗时很长，特别是长视频或大量视频
+- 应用在处理时感觉"卡死"，没有响应
+- 处理一个 10 分钟的视频需要 1-2 分钟
+
+#### 原因
+
+**原始实现问题**：
+1. **每帧单独调用 FFmpeg**：对于每个视频的每一帧，都单独启动一次 FFmpeg 进程
+2. **重复打开视频文件**：每次提取帧都要重新打开视频文件并定位到时间点
+3. **无进度反馈**：用户不知道处理进度
+
+**性能影响**：
+- 10 分钟视频，每 5 秒一帧 = 120 次 FFmpeg 调用
+- 每次调用平均耗时 0.5-1 秒
+- 总耗时 60-120 秒
+
+#### 解决方案
+
+✅ **已优化**：使用 FFmpeg `select` 过滤器批量提取所有帧
+
+**优化后**：
+- 单次 FFmpeg 调用提取所有帧
+- 性能提升 **6-25 倍**
+- 10 分钟视频处理时间从 60-120 秒降低到 5-10 秒
+
+**技术细节**：
+- 使用 `select` 过滤器：`select='gte(t,start)*lt(mod(t-start,interval),0.1)'`
+- 使用 `-vsync vfr` 可变帧率输出
+- 使用 `-ss` 先定位到开始时间，避免从头解码
+
+**参考**：
+- [Bug #010: 性能优化文档](../docs/bugs/010-performance-optimization.md)
+- [FFmpeg 集成指南](./ffmpeg-integration.md#批量提取帧推荐---高性能)
+
+---
+
+### Windows 黑窗口问题
+
+#### 症状
+
+执行抽帧操作时，会弹出多个黑色命令行窗口（FFmpeg 进程窗口）。
+
+#### 原因
+
+在 Windows 上，使用 `Command::new().output()` 执行 FFmpeg 时，默认会显示控制台窗口。
+
+#### 解决方案
+
+✅ **已修复**：使用 `CREATE_NO_WINDOW` 标志隐藏控制台窗口
+
+**代码实现**：
+```rust
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
+
+fn configure_ffmpeg_command(cmd: &mut Command) {
+    #[cfg(windows)]
+    {
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+    cmd.stdout(Stdio::piped())
+       .stderr(Stdio::piped());
+}
+```
+
+**说明**：
+- `CREATE_NO_WINDOW` 标志告诉 Windows 不要为子进程创建控制台窗口
+- 重定向 `stdout` 和 `stderr` 到管道，避免输出到控制台
+- 只在 Windows 平台应用此优化
+
+**参考**：
+- [Bug #010: 性能优化文档](../docs/bugs/010-performance-optimization.md)
+
+---
+
 ## 相关文档
 
 - [Bug 记录](../docs/bugs/) - 详细的问题记录和解决方案
 - [构建指南](../docs/build-guide.md) - 构建相关问题
 - [Tauri 框架](./tauri-framework.md) - 框架使用说明
+- [FFmpeg 集成](./ffmpeg-integration.md) - FFmpeg 使用和性能优化
 
 ---
 

@@ -38,6 +38,15 @@
 
 **状态**: ✅ 已修复
 
+### 009: FFmpeg 文件名重复 .exe 后缀问题
+**文件**: [009-ffmpeg-exe-exe-naming-issue.md](./009-ffmpeg-exe-exe-naming-issue.md)
+
+**问题**: 应用安装后 FFmpeg 文件名变成 `ffmpeg.exe.exe`，代码查找 `ffmpeg.exe` 失败
+- Tauri 打包时自动添加 `.exe` 后缀导致文件名重复
+- 路径查找逻辑未考虑重复后缀的情况
+
+**状态**: ✅ 已修复
+
 ## 添加新 Bug
 
 当遇到新 bug 时，请按照以下格式记录：

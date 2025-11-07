@@ -105,21 +105,35 @@ Tauri 2.0 不再在 `tauri.conf.json` 中配置插件。
 1. FFmpeg 文件不存在
 2. 路径配置错误
 3. 权限不足
+4. **文件名重复后缀**：Tauri 打包后文件名变成 `ffmpeg.exe.exe`
 
 #### 解决方案
 
-1. **检查文件存在**:
+1. **检查安装目录中的文件**:
+   ```powershell
+   # 检查应用安装目录（通常在 AppData\Local\FrameExtractor）
+   Get-ChildItem "C:\Users\$env:USERNAME\AppData\Local\FrameExtractor"
+   ```
+   
+   如果看到 `ffmpeg.exe.exe`（多了一个 `.exe`），这是正常的，代码已支持查找该文件名。
+
+2. **开发环境检查**:
    ```powershell
    Test-Path "src-tauri\bin\ffmpeg.exe"
    Test-Path "src-tauri\bin\ffmpeg.exe-x86_64-pc-windows-msvc.exe"
    ```
 
-2. **下载并配置 FFmpeg**:
+3. **下载并配置 FFmpeg**:
    - 从 https://github.com/BtbN/FFmpeg-Builds/releases 下载
    - 复制到 `src-tauri/bin/ffmpeg.exe`
    - 创建目标三元组命名版本
 
-3. **检查权限**: 确保应用有执行权限
+4. **检查权限**: 确保应用有执行权限
+
+5. **如果问题仍然存在**:
+   - 检查代码是否已更新（应支持 `ffmpeg.exe.exe`）
+   - 重新构建应用：`npm run tauri build`
+   - 重新安装应用
 
 ---
 

@@ -40,13 +40,20 @@ fn get_ffmpeg_path() -> PathBuf {
         if let Ok(exe_path) = std::env::current_exe() {
             if let Some(exe_dir) = exe_path.parent() {
                 // Tauri 会将 externalBin 中的文件复制到应用目录
+                // 注意：Tauri 可能会自动添加 .exe 后缀，导致文件名变成 ffmpeg.exe.exe
                 let possible_paths = vec![
-                    exe_dir.join("ffmpeg.exe"),
+                    exe_dir.join("ffmpeg.exe"),           // 标准名称
+                    exe_dir.join("ffmpeg.exe.exe"),      // Tauri 可能添加的 .exe 后缀
                     exe_dir.join("bin").join("ffmpeg.exe"),
+                    exe_dir.join("bin").join("ffmpeg.exe.exe"),
                     exe_dir.join("resources").join("bin").join("ffmpeg.exe"),
+                    exe_dir.join("resources").join("bin").join("ffmpeg.exe.exe"),
                     // Tauri 打包后的常见位置
                     exe_dir.parent()
                         .map(|p| p.join("resources").join("bin").join("ffmpeg.exe"))
+                        .unwrap_or_default(),
+                    exe_dir.parent()
+                        .map(|p| p.join("resources").join("bin").join("ffmpeg.exe.exe"))
                         .unwrap_or_default(),
                 ];
                 

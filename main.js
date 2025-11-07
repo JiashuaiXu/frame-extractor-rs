@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
+import { listen } from '@tauri-apps/api/event';
 
 // 等待 DOM 加载完成
 document.addEventListener('DOMContentLoaded', () => {
@@ -24,6 +25,8 @@ function initApp() {
     const resultsSection = document.getElementById('resultsSection');
     const resultsSummary = document.getElementById('resultsSummary');
     const resultsList = document.getElementById('resultsList');
+    const logOutput = document.getElementById('logOutput');
+    const clearLogBtn = document.getElementById('clearLogBtn');
 
     // 更新开始按钮状态
     function updateStartButtonState() {
@@ -91,6 +94,10 @@ function initApp() {
         progressBar.style.width = '0%';
         progressText.textContent = '0%';
         statusText.textContent = '正在处理...';
+        logOutput.innerHTML = ''; // 清空日志
+
+        // 设置事件监听器
+        await setupEventListeners();
 
         try {
             const results = await invoke('process_videos', {
@@ -116,6 +123,8 @@ function initApp() {
             statusText.style.color = '#dc3545';
             alert('处理失败: ' + error);
         } finally {
+            // 清理事件监听器
+            await cleanupEventListeners();
             startProcessBtn.disabled = false;
         }
     });
@@ -166,6 +175,74 @@ function initApp() {
         });
     }
 
+    // 清空日志
+    clearLogBtn.addEventListener('click', () => {
+        logOutput.innerHTML = '';
+    });
+
+    // 添加日志行
+    function addLogLine(level, message, timestamp) {
+        const logLine = document.createElement('div');
+        logLine.className = `log-line ${level}`;
+        
+        const timestampSpan = timestamp ? `<span class="log-timestamp">${timestamp}</span>` : '';
+        const levelSpan = `<span class="log-level ${level}"></span>`;
+        
+        logLine.innerHTML = `${timestampSpan}${levelSpan}${escapeHtml(message)}`;
+        logOutput.appendChild(logLine);
+        
+        // 自动滚动到底部
+        logOutput.scrollTop = logOutput.scrollHeight;
+    }
+
+    // HTML 转义
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // 监听日志事件
+    let logListener = null;
+    let progressListener = null;
+
     // 初始化
     updateStartButtonState();
+    
+    // 设置事件监听器（在开始处理时）
+    async function setupEventListeners() {
+        // 清理旧的监听器
+        if (logListener) {
+            await logListener();
+        }
+        if (progressListener) {
+            await progressListener();
+        }
+
+        // 监听日志事件
+        logListener = await listen('log', (event) => {
+            const { level, message, timestamp } = event.payload;
+            addLogLine(level, message, timestamp);
+        });
+
+        // 监听进度事件
+        progressListener = await listen('progress', (event) => {
+            const { current, total, percentage, message } = event.payload;
+            progressBar.style.width = `${percentage}%`;
+            progressText.textContent = `${percentage}%`;
+            statusText.textContent = message || `处理中: ${current}/${total}`;
+        });
+    }
+    
+    // 清理事件监听器
+    async function cleanupEventListeners() {
+        if (logListener) {
+            await logListener();
+            logListener = null;
+        }
+        if (progressListener) {
+            await progressListener();
+            progressListener = null;
+        }
+    }
 }
